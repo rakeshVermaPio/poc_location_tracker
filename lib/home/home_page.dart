@@ -15,10 +15,10 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final Completer<GoogleMapController> _gMapcontroller =
       Completer<GoogleMapController>();
-  final defaultMapZoom = 15.0;
+  final defaultMapZoom = 18.0;
 
   final CameraPosition _kGooglePlexPos = const CameraPosition(
-      target: LatLng(37.42796133580664, -122.085749655962), zoom: 15);
+      target: LatLng(37.42796133580664, -122.085749655962), zoom: 18);
   Set<Marker> _markers = <Marker>{};
   LatLng? _updatedMarkerPosition;
 
@@ -39,7 +39,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: GoogleMap(
-        mapType: MapType.hybrid,
+        mapType: MapType.satellite,
         initialCameraPosition: _kGooglePlexPos,
         onMapCreated: (GoogleMapController controller) {
           _gMapcontroller.complete(controller);
