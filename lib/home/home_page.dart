@@ -19,6 +19,7 @@ class _HomePageState extends State<HomePage> {
   final CameraPosition _kGooglePlexPos = const CameraPosition(
       target: LatLng(37.42796133580664, -122.085749655962), zoom: 15);
   Set<Marker> _markers = <Marker>{};
+  LatLng? _updatedMarkerPosition;
 
   @override
   void initState() {
@@ -39,11 +40,17 @@ class _HomePageState extends State<HomePage> {
         zoomControlsEnabled: false,
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {},
-        label: Text(_markers.isNotEmpty ? 'Send Location' : 'Please wait...', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.blueAccent),),
-        icon: Text(_markers.isNotEmpty
-            ? '[${_markers.first.position.latitude},${_markers.first.position.longitude}]'
-            : ''),
+        onPressed: _markers.isNotEmpty ? () {} : null,
+        label: Text(
+          _markers.isNotEmpty ? 'Send Location' : 'Please wait...',
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(color: Colors.blueAccent),
+        ),
+        icon: Text(_markers.isEmpty
+            ? ''
+            : '[${(_updatedMarkerPosition?.latitude ?? _markers.first.position.latitude).toPrecision(7)},${(_updatedMarkerPosition?.longitude ?? _markers.first.position.longitude).toPrecision(7)}]'),
       ),
     );
   }
@@ -93,24 +100,34 @@ class _HomePageState extends State<HomePage> {
     final position = await _determinePosition();
     print(
         '_fetchInitialLocation : Lat Long - ${position.latitude},${position.longitude}');
+    await _setMapCamera(position);
+    _setMarker(position);
+  }
+
+  Future<void> _setMapCamera(Position position) async {
     final GoogleMapController controller = await _gMapcontroller.future;
     final cameraUpdate = CameraUpdate.newCameraPosition(CameraPosition(
         target: LatLng(position.latitude, position.longitude),
         zoom: defaultMapZoom));
     await controller.animateCamera(cameraUpdate);
-    _setMarker(position);
   }
 
   void _setMarker(Position position) {
     final currentMillis = DateTime.timestamp().millisecondsSinceEpoch;
     final marker = Marker(
-      markerId: MarkerId(currentMillis.toString()),
-      position: LatLng(position.latitude, position.longitude),
-    );
+        markerId: MarkerId(currentMillis.toString()),
+        position: LatLng(position.latitude, position.longitude),
+        draggable: true,
+        onDragEnd: (newPos) async {
+          print('NewLatLong - ${newPos.latitude},${newPos.longitude}');
+          if (mounted) setState(() => _updatedMarkerPosition = newPos);
+        });
     if (mounted) {
-      setState(() {
-        _markers = <Marker>{marker};
-      });
+      setState(() => _markers = <Marker>{marker});
     }
   }
+}
+
+extension Ex on double {
+  double toPrecision(int n) => double.parse(toStringAsFixed(n));
 }
