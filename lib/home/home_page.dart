@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,6 +21,13 @@ class _HomePageState extends State<HomePage> {
       target: LatLng(37.42796133580664, -122.085749655962), zoom: 15);
   Set<Marker> _markers = <Marker>{};
   LatLng? _updatedMarkerPosition;
+
+  bool _sendingLocationToServer = false;
+
+  void _setSendingLocationToServer(bool value) {
+    if (_sendingLocationToServer == value) return;
+    if (mounted) setState(() => _sendingLocationToServer = value);
+  }
 
   @override
   void initState() {
@@ -40,17 +48,23 @@ class _HomePageState extends State<HomePage> {
         zoomControlsEnabled: false,
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _markers.isNotEmpty ? () {} : null,
+        onPressed: _sendingLocationToServer == false && _markers.isNotEmpty
+            ? _sendLocationToServer
+            : null,
         label: Text(
-          _markers.isNotEmpty ? 'Send Location' : 'Please wait...',
+          _sendingLocationToServer
+              ? 'Uploading location...'
+              : (_markers.isNotEmpty ? 'Send Location' : 'Please wait...'),
           style: Theme.of(context)
               .textTheme
               .titleMedium
               ?.copyWith(color: Colors.blueAccent),
         ),
-        icon: Text(_markers.isEmpty
+        icon: Text(_sendingLocationToServer
             ? ''
-            : '[${(_updatedMarkerPosition?.latitude ?? _markers.first.position.latitude).toPrecision(7)},${(_updatedMarkerPosition?.longitude ?? _markers.first.position.longitude).toPrecision(7)}]'),
+            : (_markers.isEmpty
+                ? ''
+                : '[${(_updatedMarkerPosition?.latitude ?? _markers.first.position.latitude).toPrecision(7)},${(_updatedMarkerPosition?.longitude ?? _markers.first.position.longitude).toPrecision(7)}]')),
       ),
     );
   }
@@ -126,8 +140,39 @@ class _HomePageState extends State<HomePage> {
       setState(() => _markers = <Marker>{marker});
     }
   }
+
+  Future<void> _sendLocationToServer() async {
+    _setSendingLocationToServer(true);
+    const url = 'https://website-d5bcbc2c.programmers.us/tableAPI.php';
+    final markerLatLng = _markers.firstOrNull?.position;
+    final locationCoordinate =
+        '${_updatedMarkerPosition?.latitude ?? markerLatLng?.latitude ?? 0.0},${_updatedMarkerPosition?.longitude ?? markerLatLng?.longitude ?? 0.0}';
+    final body = {'field1': locationCoordinate, 'field2': 'mobile'};
+    print('_sendLocationToServer: Url $url , RequestBody $body');
+    try {
+      final response = await http.post(Uri.parse(url), body: body);
+      print(
+          '_sendLocationToServer: StatusCode ${response.statusCode} - Body ${response.body}');
+      _setSendingLocationToServer(false);
+
+      if (response.statusCode == 200) {
+        showSnackBar(context, 'Yay! location upload success.');
+      } else {
+        showSnackBar(context, 'Oops! location upload failed.');
+      }
+    } catch (e) {
+      print('_sendLocationToServer: Exception - ${e.toString()}');
+      _setSendingLocationToServer(false);
+      showSnackBar(context, 'Something went wrong!');
+    }
+  }
 }
 
 extension Ex on double {
   double toPrecision(int n) => double.parse(toStringAsFixed(n));
+}
+
+void showSnackBar(BuildContext context, String text) {
+  final snackBar = SnackBar(content: Text(text));
+  ScaffoldMessenger.of(context).showSnackBar(snackBar);
 }
