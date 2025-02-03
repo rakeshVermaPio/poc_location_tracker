@@ -36,11 +36,14 @@ class _HomePageState extends State<HomePage> {
           _gMapcontroller.complete(controller);
         },
         markers: _markers,
+        zoomControlsEnabled: false,
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {},
-        label: const Text('To the lake!'),
-        icon: const Icon(Icons.directions_boat),
+        label: Text(_markers.isNotEmpty ? 'Send Location' : 'Please wait...', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.blueAccent),),
+        icon: Text(_markers.isNotEmpty
+            ? '[${_markers.first.position.latitude},${_markers.first.position.longitude}]'
+            : ''),
       ),
     );
   }
